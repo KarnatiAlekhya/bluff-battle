@@ -1,4 +1,3 @@
-
 const API = '/.netlify/functions/game';
 const app = document.querySelector('#app');
 const toastEl = document.querySelector('#toast');
