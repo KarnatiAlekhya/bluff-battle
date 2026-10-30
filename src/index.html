@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b0a18" />
+  <meta name="description" content="Bluff Battle — a real-time multiplayer party game. Make up convincing answers, spot the truth, and out-bluff your friends." />
+  <title>Bluff Battle — Outwit Your Friends</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="ambient ambient-one"></div><div class="ambient ambient-two"></div>
+  <header class="topbar"><a class="brand" href="/" aria-label="Bluff Battle home"><span class="brand-mark">B</span><span>BLUFF<span class="brand-accent">BATTLE</span></span></a><div class="topbar-right"><span class="live-dot"></span><span class="live-label">LIVE PARTY GAME</span></div></header>
+  <main id="app" class="shell"><section class="loading-card"><div class="spinner"></div><p>Setting up the game table…</p></section></main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
