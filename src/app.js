@@ -424,8 +424,8 @@ function renderGame(s) {
     p => p.id === session.playerId
   );
 
-  // FIX: Determine host status using the server's player data.
-  const isHost = Boolean(me?.isHost);
+  // Use the server-marked current player to determine host status.
+  const isHost = Boolean(s.players.find(p => p.isYou)?.isHost);
 
   const roundDots = [1, 2, 3]
     .map(n => `<i class="${n <= s.round ? 'active' : ''}"></i>`)
