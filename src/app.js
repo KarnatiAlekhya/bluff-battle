@@ -378,7 +378,12 @@ async function refresh() {
     }
 
     currentState = state;
-    renderGame(state);
+
+    // IMPORTANT: Do not re-render while the player is typing.
+    // This keeps the textarea mounted and preserves the typed text.
+    if (document.activeElement?.id !== 'fake-answer') {
+      renderGame(state);
+    }
 
   } catch (e) {
     if (/not in this room|session/i.test(e.message)) {
@@ -807,7 +812,7 @@ function renderGame(s) {
       }
     });
 
-  // Only the host sees this button.
+  // Host can end the game for every player.
   document
     .querySelector('#end-game')
     ?.addEventListener('click', () => {
