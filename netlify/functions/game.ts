@@ -1,25 +1,73 @@
-
 import { getStore } from '@netlify/blobs';
 
-const store = () =>
-  getStore({
-    name: 'bluff-battle-live',
-    consistency: 'strong'
-  });
+// Site-wide store with strong consistency for multiplayer room state.
+// Netlify Functions provide the site ID and token automatically.
+const store = () => getStore({
+  name: 'bluff-battle-live',
+  consistency: 'strong'
+});
 
 const QUESTIONS = [
-  { prompt: 'What is the official name for the smell after rain?', answer: 'Petrichor', fact: 'The word was coined in 1964 from Greek roots.' },
-  { prompt: 'Which animal has three hearts?', answer: 'The octopus', fact: 'Two hearts pump blood to the gills; one pumps it to the body.' },
-  { prompt: 'What is the dot over a lowercase i or j called?', answer: 'A tittle', fact: 'The tiny mark has its own name: a tittle.' },
-  { prompt: 'Which planet has a day longer than its year?', answer: 'Venus', fact: 'Venus rotates very slowly compared with its orbit around the Sun.' },
-  { prompt: 'What is the national animal of Scotland?', answer: 'The unicorn', fact: 'The unicorn has appeared in Scottish heraldry for centuries.' },
-  { prompt: 'What do you call a group of flamingos?', answer: 'A flamboyance', fact: 'A group of flamingos is commonly called a flamboyance.' },
-  { prompt: 'Which food never spoils when stored properly?', answer: 'Honey', fact: 'Honey’s low water content and acidity help prevent microbial growth.' },
-  { prompt: 'What is the only mammal capable of true flight?', answer: 'The bat', fact: 'Other gliding mammals cannot sustain powered flight.' },
-  { prompt: 'Which country invented the first modern printed book?', answer: 'China', fact: 'Woodblock printing and early printed books developed in China.' },
-  { prompt: 'What is the fear of long words humorously called?', answer: 'Hippopotomonstrosesquipedaliophobia', fact: 'The unusually long term is used humorously for the fear of long words.' },
-  { prompt: 'Which sea creature has blue blood?', answer: 'The horseshoe crab', fact: 'Its copper-based blood uses hemocyanin to carry oxygen.' },
-  { prompt: 'What is the smallest bone in the human body?', answer: 'The stapes', fact: 'The stapes is a tiny bone in the middle ear.' }
+  {
+    prompt: 'What is the official name for the smell after rain?',
+    answer: 'Petrichor',
+    fact: 'The word was coined in 1964 from Greek roots.'
+  },
+  {
+    prompt: 'Which animal has three hearts?',
+    answer: 'The octopus',
+    fact: 'Two hearts pump blood to the gills; one pumps it to the body.'
+  },
+  {
+    prompt: 'What is the dot over a lowercase i or j called?',
+    answer: 'A tittle',
+    fact: 'The tiny mark has its own name: a tittle.'
+  },
+  {
+    prompt: 'Which planet has a day longer than its year?',
+    answer: 'Venus',
+    fact: 'Venus rotates very slowly compared with its orbit around the Sun.'
+  },
+  {
+    prompt: 'What is the national animal of Scotland?',
+    answer: 'The unicorn',
+    fact: 'The unicorn has appeared in Scottish heraldry for centuries.'
+  },
+  {
+    prompt: 'What do you call a group of flamingos?',
+    answer: 'A flamboyance',
+    fact: 'A group of flamingos is commonly called a flamboyance.'
+  },
+  {
+    prompt: 'Which food never spoils when stored properly?',
+    answer: 'Honey',
+    fact: 'Honey’s low water content and acidity help prevent microbial growth.'
+  },
+  {
+    prompt: 'What is the only mammal capable of true flight?',
+    answer: 'The bat',
+    fact: 'Other gliding mammals can travel through the air but cannot sustain powered flight.'
+  },
+  {
+    prompt: 'Which country invented the first modern printed book?',
+    answer: 'China',
+    fact: 'Woodblock printing and early printed books developed in China.'
+  },
+  {
+    prompt: 'What is the fear of long words humorously called?',
+    answer: 'Hippopotomonstrosesquipedaliophobia',
+    fact: 'The unusually long term is used humorously for the fear of long words.'
+  },
+  {
+    prompt: 'Which sea creature has blue blood?',
+    answer: 'The horseshoe crab',
+    fact: 'Its copper-based blood uses hemocyanin to carry oxygen.'
+  },
+  {
+    prompt: 'What is the smallest bone in the human body?',
+    answer: 'The stapes',
+    fact: 'The stapes is a tiny bone in the middle ear.'
+  }
 ];
 
 const json = (data, status = 200) =>
@@ -68,13 +116,13 @@ async function listJSON(s, prefix) {
   const { blobs } = await s.list({ prefix });
 
   const values = await Promise.all(
-    blobs.map(async (b) => ({
+    blobs.map(async b => ({
       key: b.key,
       value: await readJSON(s, b.key)
     }))
   );
 
-  return values.filter((x) => x.value !== null);
+  return values.filter(x => x.value !== null);
 }
 
 function shuffle(items, seed) {
@@ -82,11 +130,16 @@ function shuffle(items, seed) {
   let h = 2166136261;
 
   for (const ch of seed) {
-    h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+    h = Math.imul(
+      h ^ ch.charCodeAt(0),
+      16777619
+    ) >>> 0;
   }
 
   for (let i = a.length - 1; i > 0; i--) {
-    h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
+    h = (
+      Math.imul(h, 1664525) + 1013904223
+    ) >>> 0;
 
     const j = h % (i + 1);
 
@@ -104,7 +157,7 @@ async function getPlayers(s, c) {
   const slots = await listJSON(s, `room:${c}:slot:`);
 
   return slots
-    .map((x) => x.value)
+    .map(x => x.value)
     .filter(Boolean)
     .sort((a, b) => a.slot - b.slot);
 }
@@ -175,18 +228,24 @@ async function joinRoom(s, body) {
     }, 400);
   }
 
-  if (!/^[A-Z0-9]{6}$/.test(c)) {
-    return json({
-      error: 'Enter a valid six-character room code.'
-    }, 400);
-  }
-
   const meta = await getRoom(s, c);
 
   if (!meta) {
     return json({
       error: 'Room not found. Check the code and try again.'
     }, 404);
+  }
+
+  // Do not allow anyone to join a room ended by the host.
+  if (
+    await readJSON(
+      s,
+      `${eventPrefix(c, meta.gameId)}ended`
+    )
+  ) {
+    return json({
+      error: 'The host has ended this game. This room is closed.'
+    }, 410);
   }
 
   if (
@@ -232,12 +291,14 @@ async function state(s, c, playerId) {
   const meta = await getRoom(s, c);
 
   if (!meta) {
-    return json({ error: 'Room not found.' }, 404);
+    return json({
+      error: 'Room not found.'
+    }, 404);
   }
 
   const players = await getPlayers(s, c);
 
-  if (!players.some((p) => p.id === playerId)) {
+  if (!players.some(p => p.id === playerId)) {
     return json({
       error: 'You are not in this room. Rejoin with the room code.'
     }, 403);
@@ -248,15 +309,39 @@ async function state(s, c, playerId) {
     eventPrefix(c, meta.gameId)
   );
 
+  // Check whether the host has ended the game.
+  const ended = gameEvents.find(
+    x => x.value.type === 'endGame'
+  )?.value;
+
+  if (ended) {
+    return json({
+      roomCode: c,
+      gameId: meta.gameId,
+      players: players.map(p => ({
+        name: p.name,
+        slot: p.slot,
+        score: 0,
+        isHost: p.id === meta.hostId,
+        isYou: p.id === playerId
+      })),
+      playerCount: players.length,
+      phase: 'ended',
+      endedBy:
+        players.find(p => p.id === ended.playerId)?.name ||
+        'The host'
+    });
+  }
+
   const starts = gameEvents
-    .filter((x) => x.value.type === 'start')
-    .map((x) => x.value);
+    .filter(x => x.value.type === 'start')
+    .map(x => x.value);
 
   const start = starts[0] || null;
 
   const advances = gameEvents
-    .filter((x) => x.value.type === 'advance')
-    .map((x) => x.value)
+    .filter(x => x.value.type === 'advance')
+    .map(x => x.value)
     .sort((a, b) => a.round - b.round);
 
   const round = advances.length
@@ -271,21 +356,23 @@ async function state(s, c, playerId) {
     ? QUESTIONS[start.questionIndexes[round - 1]]
     : null;
 
+  const prefix = eventPrefix(c, meta.gameId);
+
   const submissions = gameEvents
     .filter(
-      (x) =>
+      x =>
         x.value.type === 'submission' &&
         x.value.round === round
     )
-    .map((x) => x.value);
+    .map(x => x.value);
 
   const votes = gameEvents
     .filter(
-      (x) =>
+      x =>
         x.value.type === 'vote' &&
         x.value.round === round
     )
-    .map((x) => x.value);
+    .map(x => x.value);
 
   let phase = !start ? 'lobby' : 'writing';
   let voteStartedAt = null;
@@ -293,7 +380,7 @@ async function state(s, c, playerId) {
   if (start) {
     voteStartedAt =
       submissions.length >= players.length
-        ? Math.max(...submissions.map((x) => x.at))
+        ? Math.max(...submissions.map(x => x.at))
         : roundStart + 60000;
 
     if (
@@ -315,52 +402,50 @@ async function state(s, c, playerId) {
   }
 
   const mySubmission = submissions.find(
-    (x) => x.playerId === playerId
+    x => x.playerId === playerId
   );
 
   const myVote = votes.find(
-    (x) => x.playerId === playerId
+    x => x.playerId === playerId
   );
 
   const scores = Object.fromEntries(
-    players.map((p) => [p.id, 0])
+    players.map(p => [p.id, 0])
   );
 
-  // Score only completed rounds.
   for (let r = 1; r <= 3; r++) {
     const subs = gameEvents
       .filter(
-        (x) =>
+        x =>
           x.value.type === 'submission' &&
           x.value.round === r
       )
-      .map((x) => x.value);
+      .map(x => x.value);
 
     const vs = gameEvents
       .filter(
-        (x) =>
+        x =>
           x.value.type === 'vote' &&
           x.value.round === r
       )
-      .map((x) => x.value);
+      .map(x => x.value);
 
     if (
       start &&
       (
         r < round ||
+        phase === 'reveal' ||
         (r === round && phase === 'reveal')
       )
     ) {
       for (const v of vs) {
-        // +2 for correctly finding the real answer.
         if (v.answerId === 'real') {
           scores[v.playerId] =
             (scores[v.playerId] || 0) + 2;
         }
 
-        // +1 to the bluff author for each opponent fooled.
         const chosen = subs.find(
-          (x) => x.answerId === v.answerId
+          x => x.answerId === v.answerId
         );
 
         if (
@@ -374,8 +459,7 @@ async function state(s, c, playerId) {
     }
   }
 
-  const playerList = players.map((p) => ({
-    id: p.id,
+  const playerList = players.map(p => ({
     name: p.name,
     slot: p.slot,
     score: scores[p.id] || 0,
@@ -391,7 +475,7 @@ async function state(s, c, playerId) {
         answerId: 'real',
         text: currentQuestion.answer
       },
-      ...submissions.map((x) => ({
+      ...submissions.map(x => ({
         answerId: x.answerId,
         text: x.text,
         authorId: x.playerId
@@ -405,11 +489,9 @@ async function state(s, c, playerId) {
 
     answerOptions = shuffled
       .filter(
-        (x) =>
-          phase === 'reveal' ||
-          x.authorId !== playerId
+        x => phase === 'reveal' || x.authorId !== playerId
       )
-      .map((x) => ({
+      .map((x, i) => ({
         answerId: x.answerId,
         optionId: `option-${shuffled.indexOf(x)}`,
         text: x.text,
@@ -418,11 +500,11 @@ async function state(s, c, playerId) {
               isCorrect: x.answerId === 'real',
               authorName: x.authorId
                 ? players.find(
-                    (p) => p.id === x.authorId
+                    p => p.id === x.authorId
                   )?.name
                 : null,
               votes: votes.filter(
-                (v) => v.answerId === x.answerId
+                v => v.answerId === x.answerId
               ).length
             }
           : {})
@@ -451,19 +533,16 @@ async function state(s, c, playerId) {
     submittedCount: submissions.length,
     votedCount: votes.length,
     playerCount: players.length,
-    mySubmission:
-      phase === 'writing'
-        ? Boolean(mySubmission)
-        : undefined,
-    myVote:
-      phase === 'voting'
-        ? Boolean(myVote)
-        : undefined,
+    mySubmission: phase === 'writing'
+      ? Boolean(mySubmission)
+      : undefined,
+    myVote: phase === 'voting'
+      ? Boolean(myVote)
+      : undefined,
     answerOptions,
-    correctAnswer:
-      phase === 'reveal'
-        ? currentQuestion.answer
-        : null,
+    correctAnswer: phase === 'reveal'
+      ? currentQuestion.answer
+      : null,
     leaderboard: allScores,
     canStart:
       players.length >= 2 &&
@@ -473,34 +552,32 @@ async function state(s, c, playerId) {
       playerId === meta.hostId &&
       phase === 'reveal' &&
       round < 3,
-    gameOver:
-      phase === 'reveal' && round === 3,
+    gameOver: phase === 'reveal' && round === 3,
     deadlines: {
       writing: roundStart
         ? roundStart + 60000
         : null,
-      voting:
-        phase === 'voting'
-          ? voteStartedAt + 45000
-          : null
+      voting: phase === 'voting'
+        ? voteStartedAt + 45000
+        : null
     }
   });
 }
 
 async function action(s, body) {
-  const c = String(body.roomCode || '')
-    .toUpperCase();
-
+  const c = String(body.roomCode || '').toUpperCase();
   const meta = await getRoom(s, c);
 
   if (!meta) {
-    return json({ error: 'Room not found.' }, 404);
+    return json({
+      error: 'Room not found.'
+    }, 404);
   }
 
   const playerId = String(body.playerId || '');
   const players = await getPlayers(s, c);
 
-  if (!players.some((p) => p.id === playerId)) {
+  if (!players.some(p => p.id === playerId)) {
     return json({
       error: 'You are not in this room. Rejoin with the room code.'
     }, 403);
@@ -510,8 +587,46 @@ async function action(s, body) {
   const events = await listJSON(s, prefix);
 
   const start = events.find(
-    (x) => x.value.type === 'start'
+    x => x.value.type === 'start'
   )?.value;
+
+  // Host-only action to end the game for everyone.
+  if (body.action === 'endGame') {
+    if (playerId !== meta.hostId) {
+      return json({
+        error: 'Only the host can end the game.'
+      }, 403);
+    }
+
+    const result = await putNew(
+      s,
+      `${prefix}ended`,
+      {
+        type: 'endGame',
+        playerId,
+        at: Date.now()
+      }
+    );
+
+    if (!result.modified) {
+      return json({
+        error: 'This game has already ended.'
+      }, 409);
+    }
+
+    return json({
+      ok: true
+    });
+  }
+
+  // Stop all other game actions after the host ends the game.
+  if (
+    events.some(x => x.value.type === 'endGame')
+  ) {
+    return json({
+      error: 'This game has ended.'
+    }, 410);
+  }
 
   if (body.action === 'start') {
     if (playerId !== meta.hostId) {
@@ -547,7 +662,9 @@ async function action(s, body) {
       }, 409);
     }
 
-    return json({ ok: true });
+    return json({
+      ok: true
+    });
   }
 
   if (!start) {
@@ -557,8 +674,8 @@ async function action(s, body) {
   }
 
   const advances = events
-    .filter((x) => x.value.type === 'advance')
-    .map((x) => x.value)
+    .filter(x => x.value.type === 'advance')
+    .map(x => x.value)
     .sort((a, b) => a.round - b.round);
 
   const round = advances.length
@@ -571,23 +688,23 @@ async function action(s, body) {
 
   const submissions = events
     .filter(
-      (x) =>
+      x =>
         x.value.type === 'submission' &&
         x.value.round === round
     )
-    .map((x) => x.value);
+    .map(x => x.value);
 
   const votes = events
     .filter(
-      (x) =>
+      x =>
         x.value.type === 'vote' &&
         x.value.round === round
     )
-    .map((x) => x.value);
+    .map(x => x.value);
 
   if (body.action === 'submit') {
     if (
-      Date.now() >= roundStart + 60000 ||
+      Date.now() > roundStart + 60000 ||
       submissions.length >= players.length
     ) {
       return json({
@@ -632,16 +749,17 @@ async function action(s, body) {
       }, 409);
     }
 
-    return json({ ok: true });
+    return json({
+      ok: true
+    });
   }
 
   if (body.action === 'vote') {
     const voteStart =
       submissions.length >= players.length
-        ? Math.max(...submissions.map((x) => x.at))
+        ? Math.max(...submissions.map(x => x.at))
         : roundStart + 60000;
 
-    // Voting starts after all submissions or the 60-second timer.
     if (
       Date.now() < roundStart + 60000 &&
       submissions.length < players.length
@@ -652,7 +770,7 @@ async function action(s, body) {
     }
 
     if (
-      Date.now() >= voteStart + 45000 ||
+      Date.now() > voteStart + 45000 ||
       votes.length >= players.length
     ) {
       return json({
@@ -662,11 +780,10 @@ async function action(s, body) {
 
     const answerId = String(body.answerId || '');
 
-    // Players cannot vote for their own fake answer.
     if (
       answerId !== 'real' &&
       !submissions.some(
-        (x) =>
+        x =>
           x.answerId === answerId &&
           x.playerId !== playerId
       )
@@ -694,7 +811,9 @@ async function action(s, body) {
       }, 409);
     }
 
-    return json({ ok: true });
+    return json({
+      ok: true
+    });
   }
 
   if (body.action === 'advance') {
@@ -706,7 +825,7 @@ async function action(s, body) {
 
     const voteStart =
       submissions.length >= players.length
-        ? Math.max(...submissions.map((x) => x.at))
+        ? Math.max(...submissions.map(x => x.at))
         : roundStart + 60000;
 
     const reveal =
@@ -741,7 +860,9 @@ async function action(s, body) {
       }, 409);
     }
 
-    return json({ ok: true });
+    return json({
+      ok: true
+    });
   }
 
   if (body.action === 'rematch') {
@@ -768,13 +889,17 @@ async function action(s, body) {
     );
 
     if (!old) {
-      return json({ error: 'Room not found.' }, 404);
+      return json({
+        error: 'Room not found.'
+      }, 404);
     }
 
     const saved = await s.setJSON(
       roomKey(c),
       nextMeta,
-      { onlyIfMatch: old.etag }
+      {
+        onlyIfMatch: old.etag
+      }
     );
 
     if (!saved.modified) {
@@ -802,7 +927,9 @@ export default async (request) => {
       const url = new URL(request.url);
 
       if (url.searchParams.get('health') === '1') {
-        await s.list({ prefix: 'health-check:' });
+        await s.list({
+          prefix: 'health-check:'
+        });
 
         return json({
           ok: true,
