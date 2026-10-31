@@ -379,9 +379,9 @@ async function refresh() {
 
     currentState = state;
 
-    // Do not redraw the page while the player is typing.
-    const activeElement = document.activeElement;
-    const isTyping = activeElement?.id === 'fake-answer';
+    // Keep the answer box in place while the player is typing.
+    const isTyping =
+      document.activeElement?.id === 'fake-answer';
 
     if (!isTyping) {
       renderGame(state);
@@ -390,6 +390,7 @@ async function refresh() {
   } catch (e) {
     if (/not in this room|session/i.test(e.message)) {
       clearInterval(pollHandle);
+      clearInterval(tickHandle);
 
       toast(e.message);
 
@@ -427,12 +428,9 @@ function playerRows(players) {
 }
 
 function renderGame(s) {
-  const me = s.players.find(
-    p => p.id === session.playerId
+  const isHost = Boolean(
+    s.players.find(p => p.isYou)?.isHost
   );
-
-  // Use the server-marked current player to determine host status.
-  const isHost = Boolean(s.players.find(p => p.isYou)?.isHost);
 
   const roundDots = [1, 2, 3]
     .map(n => `<i class="${n <= s.round ? 'active' : ''}"></i>`)
@@ -445,7 +443,11 @@ function renderGame(s) {
           <small>ROOM CODE · SHARE WITH FRIENDS</small>
           <strong>${esc(s.roomCode)}</strong>
         </div>
-        <button class="copy-btn" id="copy-code">COPY</button>
+
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="copy-btn" id="copy-code">COPY</button>
+          <button class="copy-btn" id="exit-room">EXIT</button>
+        </div>
       </div>
 
       <span class="status-chip">
@@ -800,6 +802,28 @@ function renderGame(s) {
       } catch {
         toast(`Room code: ${s.roomCode}`);
       }
+    });
+
+  // Exit this room on this device.
+  document
+    .querySelector('#exit-room')
+    ?.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to leave this room?')) {
+        return;
+      }
+
+      clearInterval(pollHandle);
+      clearInterval(tickHandle);
+
+      localStorage.removeItem('bluff-battle-session');
+
+      session = null;
+      currentState = null;
+      selectedAnswer = null;
+      lastPhaseKey = '';
+
+      history.replaceState({}, '', '/');
+      homeView();
     });
 
   document
