@@ -378,19 +378,11 @@ async function refresh() {
     }
 
     currentState = state;
-
-    // Keep the answer box in place while the player is typing.
-    const isTyping =
-      document.activeElement?.id === 'fake-answer';
-
-    if (!isTyping) {
-      renderGame(state);
-    }
+    renderGame(state);
 
   } catch (e) {
     if (/not in this room|session/i.test(e.message)) {
       clearInterval(pollHandle);
-      clearInterval(tickHandle);
 
       toast(e.message);
 
@@ -428,9 +420,8 @@ function playerRows(players) {
 }
 
 function renderGame(s) {
-  const isHost = Boolean(
-    s.players.find(p => p.isYou)?.isHost
-  );
+  // Use the server-marked current player to determine host status.
+  const isHost = Boolean(s.players.find(p => p.isYou)?.isHost);
 
   const roundDots = [1, 2, 3]
     .map(n => `<i class="${n <= s.round ? 'active' : ''}"></i>`)
@@ -443,9 +434,9 @@ function renderGame(s) {
           <small>ROOM CODE · SHARE WITH FRIENDS</small>
           <strong>${esc(s.roomCode)}</strong>
         </div>
-
         <div style="display:flex;gap:10px;align-items:center">
           <button class="copy-btn" id="copy-code">COPY</button>
+          ${isHost && s.phase !== 'ended' ? '<button class="copy-btn" id="end-game">END GAME</button>' : ''}
           <button class="copy-btn" id="exit-room">EXIT</button>
         </div>
       </div>
@@ -458,7 +449,19 @@ function renderGame(s) {
 
   let content = '';
 
-  if (s.phase === 'lobby') {
+  if (s.phase === 'ended') {
+    content = `
+      <section class="game-panel" style="max-width:720px;margin:40px auto;text-align:center">
+        <div class="big-icon">🛑</div>
+        <h2>Game ended by the host</h2>
+        <p class="phase-copy">
+          ${esc(s.endedBy || 'The host')} has ended this game for everyone.
+          This room is now closed.
+        </p>
+        <button class="btn btn-primary" id="ended-home">Back to home</button>
+      </section>
+    `;
+  } else if (s.phase === 'lobby') {
     content = `
       <div class="game-layout">
         <section class="game-panel">
@@ -804,7 +807,36 @@ function renderGame(s) {
       }
     });
 
-  // Exit this room on this device.
+  // Only the host sees this button.
+  document
+    .querySelector('#end-game')
+    ?.addEventListener('click', () => {
+      if (!confirm(
+        'End this game for every player in the room? This cannot be undone.'
+      )) {
+        return;
+      }
+
+      sendAction('endGame');
+    });
+
+  document
+    .querySelector('#ended-home')
+    ?.addEventListener('click', () => {
+      clearInterval(pollHandle);
+      clearInterval(tickHandle);
+
+      localStorage.removeItem('bluff-battle-session');
+
+      session = null;
+      currentState = null;
+      selectedAnswer = null;
+      lastPhaseKey = '';
+
+      history.replaceState({}, '', '/');
+      homeView();
+    });
+
   document
     .querySelector('#exit-room')
     ?.addEventListener('click', () => {
